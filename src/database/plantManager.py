@@ -127,4 +127,13 @@ class PlantManager:
                             .join(PlantCamera)
                             .where(PlantCamera.is_active == True))
         return activeCameras
+    
+    def get_plant_by_camera(self, camera):
+        plant_camera = PlantCamera.get_or_none(
+            (PlantCamera.camera == camera) & 
+            (PlantCamera.is_active == True)
+        )
+        if plant_camera:
+            return plant_camera.plant
+        return None
                             
