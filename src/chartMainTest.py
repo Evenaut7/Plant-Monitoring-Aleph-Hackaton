@@ -1,6 +1,6 @@
 from database.models import Specimen, Plant, Camera, PlantCamera, Observation
 from database.plantManager import PlantManager
-from charts import ChartManager
+from utilities.chartManager import ChartManager
 from datetime import timedelta
 import datetime
 
