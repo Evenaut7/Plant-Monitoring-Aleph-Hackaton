@@ -1,13 +1,14 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.plantManager import PlantManager
+from database.models import Specimen, Plant
 import cv2
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Plant Monitoring System")
-        self.root.geometry("600x500")
+        self.root.geometry("600x550")
         self.manager = PlantManager()
         self.manager.initialize_database()
         self._build_ui()
@@ -17,15 +18,18 @@ class App:
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        self.tab_cameras = tk.Frame(self.notebook, padx=15, pady=15)
-        self.tab_create  = tk.Frame(self.notebook, padx=15, pady=15)
-        self.tab_plants  = tk.Frame(self.notebook, padx=15, pady=15)
+        self.tab_cameras         = tk.Frame(self.notebook, padx=15, pady=15)
+        self.tab_create_specimen = tk.Frame(self.notebook, padx=15, pady=15)
+        self.tab_create_plant    = tk.Frame(self.notebook, padx=15, pady=15)
+        self.tab_plants          = tk.Frame(self.notebook, padx=15, pady=15)
 
-        self.notebook.add(self.tab_cameras, text="  Cameras  ")
-        self.notebook.add(self.tab_create,  text="  Create Plant  ")
-        self.notebook.add(self.tab_plants,  text="  Registered Plants  ")
+        self.notebook.add(self.tab_cameras,         text="  Cameras  ")
+        self.notebook.add(self.tab_create_specimen, text="  Create Specimen  ")
+        self.notebook.add(self.tab_create_plant,    text="  Create Plant  ")
+        self.notebook.add(self.tab_plants,          text="  Registered Plants  ")
 
         self._build_cameras_section()
+        self._build_create_specimen_section()
         self._build_create_plant_section()
         self._build_plants_section()
 
@@ -49,27 +53,40 @@ class App:
         tk.Button(self.tab_cameras, text="Assign Camera", command=self._assign_camera).pack(fill=tk.X, pady=5)
         tk.Button(self.tab_cameras, text="Refresh Cameras", command=self._detect_cameras).pack(fill=tk.X)
 
-    # ─── TAB 2: Crear planta ──────────────────────────────────────────────────
-    def _build_create_plant_section(self):
-        tk.Label(self.tab_create, text="Create Plant", font=("Arial", 12, "bold")).pack(anchor="w")
+    # ─── TAB 2: Crear Specimen ────────────────────────────────────────────────
+    def _build_create_specimen_section(self):
+        tk.Label(self.tab_create_specimen, text="Create Specimen", font=("Arial", 12, "bold")).pack(anchor="w")
 
-        fields = [
+        fields_specimen = [
             ("Specimen name",     "entry_specimen"),
             ("Care instructions", "entry_care"),
             ("Common color",      "entry_color"),
             ("Maturation desc",   "entry_maduration"),
-            ("Plant description", "entry_plant_desc"),
         ]
-
-        for label, attr in fields:
-            tk.Label(self.tab_create, text=label).pack(anchor="w")
-            entry = tk.Entry(self.tab_create)
+        for label, attr in fields_specimen:
+            tk.Label(self.tab_create_specimen, text=label).pack(anchor="w")
+            entry = tk.Entry(self.tab_create_specimen)
             entry.pack(fill=tk.X, pady=2)
             setattr(self, attr, entry)
 
-        tk.Button(self.tab_create, text="Create Plant", command=self._create_plant).pack(fill=tk.X, pady=10)
+        tk.Button(self.tab_create_specimen, text="Create Specimen", command=self._create_specimen).pack(fill=tk.X, pady=8)
 
-    # ─── TAB 3: Plantas registradas ───────────────────────────────────────────
+    # ─── TAB 3: Crear Plant ───────────────────────────────────────────────────
+    def _build_create_plant_section(self):
+        tk.Label(self.tab_create_plant, text="Create Plant", font=("Arial", 12, "bold")).pack(anchor="w")
+
+        tk.Label(self.tab_create_plant, text="Plant description").pack(anchor="w")
+        self.entry_plant_desc = tk.Entry(self.tab_create_plant)
+        self.entry_plant_desc.pack(fill=tk.X, pady=2)
+
+        tk.Label(self.tab_create_plant, text="Specimen:").pack(anchor="w")
+        self.specimen_var = tk.StringVar()
+        self.specimen_dropdown = ttk.Combobox(self.tab_create_plant, textvariable=self.specimen_var, state="readonly")
+        self.specimen_dropdown.pack(fill=tk.X, pady=2)
+
+        tk.Button(self.tab_create_plant, text="Create Plant", command=self._create_plant).pack(fill=tk.X, pady=8)
+
+    # ─── TAB 4: Plantas registradas ───────────────────────────────────────────
     def _build_plants_section(self):
         tk.Label(self.tab_plants, text="Registered Plants", font=("Arial", 12, "bold")).pack(anchor="w")
 
@@ -115,26 +132,43 @@ class App:
             messagebox.showinfo("Success", f"Camera {camera_index} assigned to '{plant_desc}'")
             self._refresh_all()
 
-    def _create_plant(self):
+    def _create_specimen(self):
         fields = {
             "specimen":   self.entry_specimen.get(),
             "care":       self.entry_care.get(),
             "color":      self.entry_color.get(),
             "maduration": self.entry_maduration.get(),
-            "desc":       self.entry_plant_desc.get(),
         }
         if not all(fields.values()):
-            messagebox.showwarning("Warning", "All fields are required.")
+            messagebox.showwarning("Warning", "All specimen fields are required.")
             return
-        self.manager.create_complete_plant(
+        specimen, created = Specimen.get_or_create(
             specimen_name=fields["specimen"],
-            care_instructions=fields["care"],
-            color_desc=fields["color"],
-            maduration_desc=fields["maduration"],
-            plant_desc=fields["desc"]
+            defaults={
+                "care_instructions":        fields["care"],
+                "common_color_description": fields["color"],
+                "maduration_description":   fields["maduration"],
+            }
         )
-        messagebox.showinfo("Success", f"Plant '{fields['desc']}' created.")
-        self._refresh_all()
+        if created:
+            messagebox.showinfo("Success", f"Specimen '{fields['specimen']}' created.")
+        else:
+            messagebox.showinfo("Info", f"Specimen '{fields['specimen']}' already exists.")
+        self._refresh_specimens()
+
+    def _create_plant(self):
+        desc = self.entry_plant_desc.get()
+        specimen_name = self.specimen_var.get()
+        if not desc or not specimen_name:
+            messagebox.showwarning("Warning", "All plant fields are required.")
+            return
+        try:
+            specimen = Specimen.get(Specimen.specimen_name == specimen_name)
+            Plant.create(plant_description=desc, specimen=specimen)
+            messagebox.showinfo("Success", f"Plant '{desc}' created.")
+            self._refresh_all()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     def _refresh_plants(self):
         self.plants_listbox.delete(0, tk.END)
@@ -147,9 +181,14 @@ class App:
             plant_names.append(plant.plant_description)
         self.plant_dropdown["values"] = plant_names
 
+    def _refresh_specimens(self):
+        specimens = list(Specimen.select())
+        self.specimen_dropdown["values"] = [s.specimen_name for s in specimens]
+
     def _refresh_all(self):
         self._detect_cameras()
         self._refresh_plants()
+        self._refresh_specimens()
 
     def run(self):
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
