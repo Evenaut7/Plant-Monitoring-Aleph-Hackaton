@@ -54,10 +54,23 @@ def main():
         maduration_desc="Matures in 2-3 years, can grow up to 10 feet indoors.",
         plant_desc="Large indoor plant with broad leaves."
     )
+    manager.create_complete_plant(
+        specimen_name="Monstera Deliciosa",
+        care_instructions="Water when top inch of soil is dry, bright indirect light.",
+        color_desc="Green leaves with natural holes",
+        maduration_desc="Matures in 1-2 years, can grow up to 6 feet indoors.",
+        plant_desc="Tropical plant with distinctive split leaves."
+    )
     manager.register_camera(state="active", index=0) 
+    manager.register_camera(state="active", index=1)
     manager.assign_camera_to_plant(
         plant=manager.get_plant_by_description("Large indoor plant with broad leaves."),
         camera=manager.get_camera_by_index(0),
+        interval_hours=0.01 
+    )
+    manager.assign_camera_to_plant(
+        plant=manager.get_plant_by_description("Tropical plant with distinctive split leaves."),
+        camera=manager.get_camera_by_index(1),
         interval_hours=0.01 
     )
     active_plant_cameras = manager.get_active_plantCameras()
