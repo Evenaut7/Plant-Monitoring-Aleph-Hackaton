@@ -40,7 +40,22 @@ class PlantManager:
             return existing_plant
 
     def register_camera(self, state, index):
-        return Camera.create(state=state, index=index)
+        # Usamos get_or_create en lugar de create
+        camera, created = Camera.get_or_create(
+            index=index,
+            defaults={'state': state}
+        )
+        
+        if created:
+            print(f"New camera registered with index: {index}")
+        else:
+            print(f"Using existing camera with index: {index}")
+            # Si ya existía pero le pasamos un estado distinto, lo actualizamos
+            if camera.state != state:
+                camera.state = state
+                camera.save()
+                
+        return camera
 
     def assign_camera_to_plant(self, plant, camera, interval_hours):
         deactivate_query = PlantCamera.update(is_active=False).where(
@@ -168,3 +183,10 @@ class PlantManager:
             return plant_camera.plant
         return None
                             
+    def get_camera_by_index(self, index):
+        camera = Camera.get_or_none(Camera.index == index)
+        return camera
+    
+    def get_plant_by_description(self, description):
+        plant = Plant.get_or_none(Plant.plant_description == description)
+        return plant

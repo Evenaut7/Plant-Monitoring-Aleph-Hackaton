@@ -22,7 +22,7 @@ class Camera(BaseModel):
         ('active', 'Active'),
         ('inactive', 'Inactive')
     )
-    index = IntegerField()
+    index = IntegerField(unique=True)
     state = CharField(choices=STATE_CHOICES)    
     
 class PlantCamera(BaseModel):

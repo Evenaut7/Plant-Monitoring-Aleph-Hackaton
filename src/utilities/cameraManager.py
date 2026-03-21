@@ -9,10 +9,12 @@ class CameraDevice:
     def __init__(self, ID, state):
         self.ID = ID
         self.state = state
-        # Create a new VideoCapture object
-        self.cam = cv2.VideoCapture(ID)
-        self.job = None #Job starts deactivated
-        self.scheduler = schedule.Scheduler() #Each instance has its own scheduler
+        
+        # ¡Agregamos cv2.CAP_DSHOW aquí!
+        self.cam = cv2.VideoCapture(ID, cv2.CAP_DSHOW) 
+        
+        self.job = None 
+        self.scheduler = schedule.Scheduler() 
 
         if not self.cam.isOpened():
             raise RuntimeError(f"Couldn't open camera with ID {ID}")
