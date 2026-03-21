@@ -32,10 +32,12 @@ def load_context(context_path):
         return f.read()
 
 # función para analizar la imagen de la planta usando el modelo de lenguaje y el contexto cargado
-def analyze_plant(image_path, context_path):
+def analyze_plant(image_path, context_path, specimen_data: dict):
         
         base64_image = encode_image(image_path)
         context = load_context(context_path)
+
+        specimen_info = json.dumps(specimen_data, ensure_ascii=False)
 
         chat_completion = client.chat.completions.create(
             messages=[
@@ -46,6 +48,10 @@ def analyze_plant(image_path, context_path):
                 {
                     "role": "user",
                     "content": [
+                        {
+                            "type": "text",
+                            "text": specimen_info
+                        },
                         {
                             "type": "image_url",
                             "image_url": {
