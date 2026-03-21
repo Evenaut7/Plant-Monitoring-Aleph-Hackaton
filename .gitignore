@@ -17,7 +17,7 @@ __pycache__/
 *.pyd
 
 # Fotos tomadas por la app
-photos/
+temp/
 
 # VS Code
 .vscode/
