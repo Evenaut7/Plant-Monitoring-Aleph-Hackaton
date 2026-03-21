@@ -11,75 +11,55 @@ class Camera:
         self.state = state
         # Create a new VideoCapture object
         self.cam = cv2.VideoCapture(ID)
+        self.job = None #Job starts deactivated
+        self.scheduler = schedule.Scheduler() #Each instance has its own scheduler
 
         if not self.cam.isOpened():
-            raise RuntimeError(f"No se pudo abrir la cámara con índice {ID}")
+            raise RuntimeError(f"Couldn't open camera with ID {ID}")
         else:
-            print(f"Cámara {ID} abierta correctamente")
-
-    # Displays a real time video from the designated camera by index
-    """
-    def real_time_display(self):
-        # Create a new VideoCapture object
-        cam = cv2.VideoCapture(self.ID)
-
-        # Initialise variables to store current time difference as well as previous time call value
-        previous = time()
-        delta = 0
-
-        # Keep looping
-        while True:
-        # Get the current time, increase delta and update the previous variable
-            current = time()
-            delta += current - previous
-            previous = current
-
-            # Check if 3 (or some other value) seconds passed
-            if delta > 3:
-                # Operations on image
-                # Reset the time counter
-                delta = 0
-
-            # Show the image and keep streaming
-            _, img = cam.read()
-            cv2.imshow("Frame", img)
-            cv2.waitKey(1)
-    """
+            print(f"Camera {ID} opened correctly")
 
     #Stores a photo taken from the designated camera by index in a designated path
     def take_photo(self, path):
 
+        #Empties the frames in buffer
+        for _ in range(5):
+            self.cam.grab()
         # Capture one frame
         ret, frame = self.cam.read()
 
         if not ret or frame is None:
-            print("Error: no se pudo capturar el frame")
+            print("Error: couldn't capture frame")
             return
         # Save frame in designated 'path'
         filepath = path + "temp.png"
         cv2.imwrite(filepath, frame)
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Foto guardada en {filepath}")
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Photo stored in {filepath}")
 
     def release(self):
         self.cam.release()
 
-def run_schedule():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    #Starts running the secondary thread
+    def run_schedule(self):
+        while self.running:
+            self.scheduler.run_pending()
+            time.sleep(1)
 
-camara = Camera(1, True)
+    #Takes photos from this camera every {interval} seconds
+    def activate_job(self, interval = 5, path = "temp/"):
+        if self.job is None:
+            #If the camera is not taking pictures, starts job
+            self.job = self.scheduler.every(interval).seconds.do(self.take_photo, path=path)
+            #Starts a thread to run in the background
+            self.running = True
+            self.thread = threading.Thread(target=self.run_schedule, daemon=True)
+            self.thread.start()
+            print("Camera {self.ID}: active capture every {interval} secs")
 
-schedule.every(5).seconds.do(camara.take_photo, path = "test/")
-
-# Only the secondary thread runs scheduler
-thread = threading.Thread(target=run_schedule, daemon=True)
-thread.start()
-
-print("Scheduler corriendo. Presioná Ctrl+C para salir.")
-try:
-    while True:
-        time.sleep(1)  # ← ya no llama a run_pending() acá
-except KeyboardInterrupt:
-    print("Cerrando...")
-    camara.release()
+    #Ends the job that "activate_job" starts
+    def deactivate_job(self):
+        if self.job is not None:
+            #If the camera is taking pictures, ends job
+            self.scheduler.cancel_job(self.job)
+            self.job = None
+            print("Camera {self.ID}: capture deactivated")
