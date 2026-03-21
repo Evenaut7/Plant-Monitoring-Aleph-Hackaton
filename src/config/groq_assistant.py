@@ -67,5 +67,3 @@ def analyze_plant(image_path, context_path, specimen_data: dict):
         response_text = chat_completion.choices[0].message.content
         return json.loads(response_text)
 
-plant_data = analyze_plant(image_path, context_path)
-print(plant_data)
