@@ -1,10 +1,10 @@
 from models import db, Specimen, Plant, Camera, PlantCamera, Observation
-from use_cases import (create_complete_plant, register_camera, 
-                       assign_camera_to_plant, register_current_observation, 
-                       get_observation_history)
+from plantManager import PlantManager
+from datetime import date
+from playhouse.shortcuts import model_to_dict
+from pprint import pprint
 
 def initialize_database():
-    """Connects to the DB and creates the tables if they don't exist."""
     db.connect()
     db.create_tables([Specimen, Plant, Camera, PlantCamera, Observation], safe=True)
 
@@ -12,9 +12,10 @@ def main():
     initialize_database()
     print("--- Monitoring System Started ---\n")
 
-    # 1. Create test data using the use cases
+    manager = PlantManager()
+
     print("Creating records...")
-    my_plant = create_complete_plant(
+    my_plant = manager.create_complete_plant(
         specimen_name="Cherry Tomato",
         care_instructions="Lots of water and direct sunlight",
         color_desc="Dark green",
@@ -22,16 +23,13 @@ def main():
         plant_desc="Tomato plant in sector A"
     )
     
-    # We added the 'index' field to match your updated Camera model!
-    my_camera = register_camera(index=1, state="active")
+    my_camera = manager.register_camera(index=1, state="active")
 
-    # 2. Assign the camera
     print("Assigning camera...")
-    assign_camera_to_plant(plant=my_plant, camera=my_camera, interval_hours=2.0)
+    manager.assign_camera_to_plant(plant=my_plant, camera=my_camera, interval_hours=2.0)
 
-    # 3. Register an observation
     print("Registering observation...")
-    register_current_observation(
+    manager.register_current_observation(
         plant=my_plant,
         health="Excellent",
         phase="Growth",
@@ -41,15 +39,44 @@ def main():
         tendency="Improving"
     )
 
-    # 4. Check the history
-    print("\n--- Plant History ---")
-    history = get_observation_history(my_plant)
-    
+    history = manager.get_observation_history(my_plant, date.today())
+    plant = manager.get_plant(my_plant)
+
+    print(f"--- {plant.plant_description} History of Today ---")
+
     for obs in history:
-        # Notice we are printing the camera's index now
-        print(f"Date: {obs.date_time.strftime('%Y-%m-%d %H:%M:%S')} | Health: {obs.health_state} | Camera Index: {obs.plant_camera.camera.index}")
+        print(f"[{obs.date_time.strftime('%Y-%m-%d %H:%M:%S')}] (Camera {obs.plant_camera.camera.index})")
+        print(f"  - Health: {obs.health_state}")
+        print(f"  - Maturation Phase: {obs.maduration_phase}")
+        print(f"  - Foliage Color: {obs.foliage_color}")
+        print(f"  - Soil: {obs.soil_condition}")
+        print(f"  - Pests: {obs.pests}")
+        print(f"  - Tendency: {obs.health_tendence}")
+        print("-" * 50)
+
+    print("\n--- Testing New Methods ---")
+
+    fetched_plant = manager.get_plant(my_plant.id)
+    print("\nFetched Plant:")
+    pprint(model_to_dict(fetched_plant))
+
+    fetched_specimen = manager.get_specimen(my_plant.specimen.id)
+    print("\nFetched Specimen:")
+    pprint(model_to_dict(fetched_specimen))
+
+    print("\nAll Specimens:")
+    all_specimens = manager.get_specimens()
+    for spec in all_specimens:
+        pprint(model_to_dict(spec))
+
+    print("\nActive Cameras:")
+    active_cameras = manager.get_active_plantCameras()
+    for cam in active_cameras:
+        pprint(model_to_dict(cam))
 
     db.close()
+
+
 
 if __name__ == '__main__':
     main()
