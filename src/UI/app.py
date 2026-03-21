@@ -100,7 +100,7 @@ class App:
         self.camera_listbox.delete(0, tk.END)
         self.detected_cameras = []
         for i in range(5):
-            cam = cv2.VideoCapture(i)
+            cam = cv2.VideoCapture(i, cv2.CAP_DSHOW)  # ← agregás CAP_DSHOW
             if cam.isOpened():
                 self.camera_listbox.insert(tk.END, f"Camera index {i}")
                 self.detected_cameras.append(i)

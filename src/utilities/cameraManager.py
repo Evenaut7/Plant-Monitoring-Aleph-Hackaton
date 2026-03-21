@@ -11,7 +11,7 @@ class CameraDevice:
         self.state = state
         
         # ¡Agregamos cv2.CAP_DSHOW aquí!
-        self.cam = cv2.VideoCapture(ID, cv2.CAP_DSHOW) 
+        self.cam = cv2.VideoCapture(ID, cv2.CAP_DSHOW)
         
         self.job = None 
         self.scheduler = schedule.Scheduler() 
