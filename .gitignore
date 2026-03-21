@@ -1,3 +1,9 @@
+# --- Bases de Datos SQLite ---
+*.db
+*.sqlite
+*.sqlite3
+plant_monitoring.db
+
 # Entorno virtual
 venv/
 
