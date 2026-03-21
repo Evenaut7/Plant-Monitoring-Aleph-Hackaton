@@ -1,4 +1,4 @@
-from models import Specimen, Plant, Camera, PlantCamera, Observation
+from .models import Specimen, Plant, Camera, PlantCamera, Observation
 from peewee import IntegrityError
 from datetime import date
 
