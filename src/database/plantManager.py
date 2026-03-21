@@ -1,5 +1,5 @@
 from .models import db, Specimen, Plant, Camera, PlantCamera, Observation
-from peewee import IntegrityError
+from peewee import IntegrityError, fn
 from datetime import date
 
 class PlantManager:
@@ -87,12 +87,26 @@ class PlantManager:
                           .where(Observation.date_time > fromDate)
                           .order_by(Observation.date_time.desc())) 
         return observations
+    
+    def get_latest_observations(self):
+        subquery = (Observation
+                    .select(fn.MAX(Observation.id))
+                    .join(PlantCamera)
+                    .where(PlantCamera.is_active == True)
+                    .group_by(Observation.plant_camera))
+
+        latest_obs = (Observation
+                      .select(Observation, PlantCamera, Plant)
+                      .join(PlantCamera)
+                      .join(Plant)
+                      .where(Observation.id.in_(subquery)))
+        return latest_obs
 
     def get_plants(self):
         plants = (Plant
                     .select()
                     .join(Specimen)
-                    .order_by(Plant.name))
+                    .order_by(Plant.plant_description))
         return plants
     
     def get_plant(self, idPlant):
