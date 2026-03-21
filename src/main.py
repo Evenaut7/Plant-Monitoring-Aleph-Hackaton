@@ -3,7 +3,7 @@ from database.plantManager import PlantManager
 from datetime import date
 from playhouse.shortcuts import model_to_dict
 from pprint import pprint
-from config.groq_assistant import analyze_plant
+from groqConfig.groq_assistant import analyze_plant
 import json ## checkear
 
 def main():
