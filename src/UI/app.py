@@ -195,5 +195,5 @@ class App:
         self.root.mainloop()
 
     def _on_close(self):
-        self.manager.close_database()
+        # No cerramos la BD acá — el monitoreo la va a necesitar
         self.root.destroy()
