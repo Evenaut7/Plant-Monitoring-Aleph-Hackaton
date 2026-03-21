@@ -1,0 +1,21 @@
+# Entorno virtual
+venv/
+
+# Variables de entorno
+.env
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Fotos tomadas por la app
+photos/
+
+# VS Code
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
