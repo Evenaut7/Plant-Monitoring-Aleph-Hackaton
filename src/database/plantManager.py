@@ -1,8 +1,15 @@
-from .models import Specimen, Plant, Camera, PlantCamera, Observation
+from .models import db, Specimen, Plant, Camera, PlantCamera, Observation
 from peewee import IntegrityError
 from datetime import date
 
 class PlantManager:
+    def initialize_database(self):
+        db.connect()
+        db.create_tables([Specimen, Plant, Camera, PlantCamera, Observation], safe=True)
+
+    def close_database(self):
+        db.close()
+
     def create_complete_plant(self, specimen_name, care_instructions, color_desc, maduration_desc, plant_desc):
         specimen, created = Specimen.get_or_create(
             specimen_name=specimen_name,

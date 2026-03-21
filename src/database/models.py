@@ -1,7 +1,7 @@
 import datetime
 from peewee import *
 
-db = SqliteDatabase('plant_monitoring.db')
+db = SqliteDatabase('database/plant_monitoring.db')
 
 class BaseModel(Model):
     class Meta:

@@ -4,15 +4,11 @@ from datetime import date
 from playhouse.shortcuts import model_to_dict
 from pprint import pprint
 
-def initialize_database():
-    db.connect()
-    db.create_tables([Specimen, Plant, Camera, PlantCamera, Observation], safe=True)
-
 def main():
-    initialize_database()
     print("--- Monitoring System Started ---\n")
 
     manager = PlantManager()
+    manager.initialize_database()
 
     print("Creating records...")
     my_plant = manager.create_complete_plant(
@@ -74,7 +70,7 @@ def main():
     for cam in active_cameras:
         pprint(model_to_dict(cam))
 
-    db.close()
+    manager.close_database()
 
 
 
