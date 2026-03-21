@@ -4,6 +4,9 @@ from groqConfig.groq_assistant import analyze_plant
 from utilities.cameraManager import CameraDevice
 from playhouse.shortcuts import model_to_dict
 import time
+import tkinter as tk
+from UI.app import App
+
 
 def build_callback(manager, plant, specimen_data, camera_id):
     
@@ -98,4 +101,6 @@ def main():
         print("System stopped.")
 
 if __name__ == '__main__':
-    main()
+    root = tk.Tk()
+    app = App(root)
+    app.run()
