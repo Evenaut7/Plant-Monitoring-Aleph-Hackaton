@@ -13,7 +13,7 @@ Utiliza el contexto dado por specimen_info para tener una mejor aproximación, u
 }
 
 Instrucciones por campo:
-- "health_state": SOLO puede ser uno de estos tres valores exactos: "Optimo", "En riesgo" o "Critico"
+- "health_state": SOLO puede ser uno de estos tres valores exactos: "Excelente", "Buena", "Regular", "Pobre", "Critica" o "Muerta"
 - "maturation_phase": etapa de crecimiento (ej: germinacion, vegetativa, floracion, fructificacion, madurez)
 - "foliage_color": usa colores simples (verde, amarillo, naranja, marron, negro, etc)
 - "soil_condition": condición visible del sustrato (ej: humedo, seco, compactado, con hongos, adecuado)
