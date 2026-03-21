@@ -57,6 +57,17 @@ class PlantManager:
         )
         return new_assignment
 
+    def unsign_camera_from_plant(self, plant):
+        update_query = PlantCamera.update(is_active=False).where(
+            (PlantCamera.plant == plant) & 
+            (PlantCamera.is_active == True)
+        )
+        updated_rows = update_query.execute()
+        if updated_rows > 0:
+            print(f"Camera successfully unassigned from plant ID {plant.id}.")
+        else:
+            print(f"No active camera found for plant ID {plant.id} to unassign.")
+
     def register_current_observation(self, plant, health, phase, color, soil, pests, tendency):
         active_assignment = PlantCamera.get_or_none(
             (PlantCamera.plant == plant) & 
@@ -121,7 +132,27 @@ class PlantManager:
         specimens = Specimen.select()
         return specimens
     
+    def get_last_plantCamera_for_every_plant(self):
+        subquery = (PlantCamera
+                    .select(fn.MAX(PlantCamera.assignament_date))
+                    .group_by(PlantCamera.plant))
+
+        last_plant_cameras = (PlantCamera
+                                .select(PlantCamera, Plant)
+                                .seleect(PlantCamera, Camera)
+                                .join(Plant)
+                                .where(PlantCamera.id.in_(subquery)))
+        return last_plant_cameras
+
     def get_active_plantCameras(self):
+        return (PlantCamera
+                    .select(PlantCamera, Camera, Plant)
+                    .join(Camera)
+                    .switch(PlantCamera)
+                    .join(Plant)
+                    .where(PlantCamera.is_active == True))
+    
+    def get_active_Cameras(self):
         activeCameras = (Camera
                             .select()
                             .join(PlantCamera)

@@ -1,38 +1,71 @@
 from database.models import db, Specimen, Plant, Camera, PlantCamera, Observation
 from database.plantManager import PlantManager
-from datetime import date
 from playhouse.shortcuts import model_to_dict
-from pprint import pprint
 from groqConfig.groq_assistant import analyze_plant
-import json ## checkear
+from utilities.cameraManager import CameraDevice
+import time
+
+def build_callback(manager, plant, specimen_data):
+    def on_photo(image_path):
+        try:
+            plant_data = analyze_plant(
+                image_path=image_path,
+                context_path="config/groq_context.txt",
+                specimen_data=specimen_data
+            )
+            manager.register_current_observation(
+                plant=plant,
+                health=plant_data["health_state"],
+                phase=plant_data["maturation_phase"],
+                color=plant_data["foliage_color"],
+                soil=plant_data["soil_condition"],
+                pests=plant_data["pests"],
+                tendency=plant_data["health_tendency"]
+            )
+            print(f"[Plant {plant.id}] Observation saved: {plant_data}")
+        except Exception as e:
+            print(f"[Plant {plant.id}] Error during analysis: {e}")
+    return on_photo
 
 def main():
-
     manager = PlantManager()
     manager.initialize_database()
 
-    ## Scheduler maneja todo esto
+    active_plant_cameras = manager.get_active_plantCameras()
 
-    ## Primero la camara saca foto, las guarda, con eso determinamos que camara le sacó la foto, y con eso determinamos 
-    # a que planta corresponde, y con eso determinamos a que espécimen corresponde,
-    #  y con eso le damos contexto a analyze_plant para que nos de un análisis más completo de la planta
+    if not active_plant_cameras:
+        print("No active cameras found.")
+        manager.close_database()
+        return
 
-    fetched_plant = manager.get_plant(1) ## Con el id obtenido por medio de la camara, usamos para obtener info de la planta y su espécimen asociado, para dar contexto a analyze_plant y obtener un análisis más completo de la planta
-    print("\nFetched Plant:")
-    pprint(model_to_dict(fetched_plant))
+    devices = []
 
-    fetched_specimen = manager.get_specimen(fetched_plant.specimen.id) ## usar para dar contexto a analyze_plant
-    print("\nFetched Specimen:")
-    pprint(model_to_dict(fetched_specimen))
+    for plant_camera in active_plant_cameras:
+        plant = plant_camera.plant
+        specimen_data = model_to_dict(manager.get_specimen(plant.specimen.id))
+        callback = build_callback(manager, plant, specimen_data)
+        ## plant_camera.observation_interval * 3600 esto va en interval, pero para pruebas lo dejo en 10 segundos
+        cam = CameraDevice(ID=plant_camera.camera.index, state="active")
+        cam.activate_job(
+            interval=10,  # 10 seconds for testing
+            path="temp/",
+            on_photo=callback
+        )
+        devices.append(cam)
+        print(f"Camera {plant_camera.camera.index} activated for plant '{plant.plant_description}'")
 
-    plant_data = analyze_plant(image_path="images/plant.jpg", context_path="config/groq_context.txt", specimen_data=model_to_dict(fetched_specimen))
-    print("\nAnalyzed Plant Data from Groq Assistant:")
-    pprint(plant_data)
+    print(f"\n{len(devices)} camera(s) running. Press Ctrl+C to stop.\n")
 
-    ## Aquí podríamos guardar la información obtenida de analyze_plant en la base de datos,
-    #  asociada a la planta y al espécimen correspondiente
-
-    manager.close_database()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        for cam in devices:
+            cam.deactivate_job()
+            cam.release()
+        manager.close_database()
+        print("System stopped.")
 
 if __name__ == '__main__':
     main()

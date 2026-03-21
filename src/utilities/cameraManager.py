@@ -4,7 +4,7 @@ import cv2
 import schedule
 import threading
 
-class Camera:
+class CameraDevice:
 
     def __init__(self, ID, state):
         self.ID = ID
@@ -21,20 +21,16 @@ class Camera:
 
     #Stores a photo taken from the designated camera by index in a designated path
     def take_photo(self, path):
-
-        #Empties the frames in buffer
         for _ in range(5):
             self.cam.grab()
-        # Capture one frame
         ret, frame = self.cam.read()
-
         if not ret or frame is None:
             print("Error: couldn't capture frame")
-            return
-        # Save frame in designated 'path'
-        filepath = path + "temp.png"
+            return None
+        filepath = f"{path}cam_{self.ID}.png"
         cv2.imwrite(filepath, frame)
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Photo stored in {filepath}")
+        return filepath
 
     def release(self):
         self.cam.release()
@@ -46,20 +42,23 @@ class Camera:
             time.sleep(1)
 
     #Takes photos from this camera every {interval} seconds
-    def activate_job(self, interval = 5, path = "temp/"):
+    def activate_job(self, interval=5, path="temp/", on_photo=None):
         if self.job is None:
-            #If the camera is not taking pictures, starts job
-            self.job = self.scheduler.every(interval).seconds.do(self.take_photo, path=path)
-            #Starts a thread to run in the background
+            def job():
+                filepath = self.take_photo(path)
+                if filepath and on_photo:
+                    on_photo(filepath)
+
+            self.job = self.scheduler.every(interval).seconds.do(job)
             self.running = True
             self.thread = threading.Thread(target=self.run_schedule, daemon=True)
             self.thread.start()
-            print("Camera {self.ID}: active capture every {interval} secs")
+            print(f"Camera {self.ID}: active capture every {interval} secs") 
 
     #Ends the job that "activate_job" starts
     def deactivate_job(self):
         if self.job is not None:
-            #If the camera is taking pictures, ends job
             self.scheduler.cancel_job(self.job)
             self.job = None
-            print("Camera {self.ID}: capture deactivated")
+            self.running = False
+            print(f"Camera {self.ID}: capture deactivated")
