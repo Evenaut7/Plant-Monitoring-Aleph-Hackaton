@@ -1,7 +1,11 @@
 import datetime
+import os
+from pathlib import Path
 from peewee import *
 
-db = SqliteDatabase('database/plant_monitoring.db')
+DB_DIR = Path(os.getenv("APPDATA")) / "PlantMonitor"
+DB_DIR.mkdir(parents=True, exist_ok=True)
+db = SqliteDatabase(str(DB_DIR / "plant_monitoring.db"))
 
 class BaseModel(Model):
     class Meta:
@@ -30,7 +34,7 @@ class PlantCamera(BaseModel):
     camera = ForeignKeyField(Camera, backref='plant_assignments')
     assignament_date = DateTimeField(default=datetime.datetime.now)
     is_active = BooleanField(default=True)
-    observation_interval = FloatField() #In Hours 
+    observation_interval = FloatField()
 
 class Observation(BaseModel):
     plant_camera = ForeignKeyField(PlantCamera, backref='observations')

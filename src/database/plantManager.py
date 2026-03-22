@@ -190,3 +190,10 @@ class PlantManager:
     def get_plant_by_description(self, description):
         plant = Plant.get_or_none(Plant.plant_description == description)
         return plant
+
+    def delete_plant(self, plant):
+        plant.delete_instance(recursive=True)
+
+    def delete_specimen(self, specimen):
+        specimen.delete_instance(recursive=True)
+    

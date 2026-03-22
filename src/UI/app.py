@@ -237,7 +237,6 @@ class App:
 
     def run(self):
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-        self.root.mainloop()
 
     def _on_close(self):
         self.root.quit()

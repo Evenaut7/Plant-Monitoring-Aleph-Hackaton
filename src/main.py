@@ -1,3 +1,15 @@
+import sys
+import os
+from pathlib import Path
+
+# Detecta si corre desde el .exe o desde Python normal
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).parent
+
+os.environ["BASE_DIR"] = str(BASE_DIR)
+
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
@@ -166,14 +178,13 @@ def main():
     # 1. EXECUTE CONFIGURATION PHASE
     root = tk.Tk()
     app = App(root)
-    app.run() 
-    
+    root.mainloop()
+
     # 2. PREPARE MONITORING PHASE
     print("\nConfiguration phase closed. Starting monitoring...")
-    
-    # Clear window for the monitor
-    for widget in root.winfo_children():
-        widget.destroy()
+
+    # Recrear la ventana para el monitor
+    root = tk.Tk()  # ← nueva ventana limpia
 
     manager = PlantManager()
     if db.is_closed():
@@ -185,9 +196,10 @@ def main():
         print("No active cameras registered. System will terminate.")
         manager.close_database()
         root.destroy()
-        exit()
+        sys.exit(0)
 
     devices = []
+    Path("temp/").mkdir(parents=True, exist_ok=True)
     for plant_camera in active_plant_cameras:
         plant = plant_camera.plant
         camera_id = plant_camera.camera.index
@@ -197,14 +209,15 @@ def main():
         
         cam = CameraDevice(ID=camera_id, state="active", plant=plant)
         interval_seconds = int(plant_camera.observation_interval * 3600)
-        if interval_seconds < 5: interval_seconds = 5 
+        if interval_seconds < 5:
+            interval_seconds = 5
         
         cam.activate_job(interval=interval_seconds, path="temp/", on_photo=callback) 
         devices.append(cam)
 
     print(f"Loading Carousel for {len(devices)} cameras...")
 
-    # 3. EXECUTE MONITORING CAROUSEL IN THE SAME WINDOW
+    # 3. EXECUTE MONITORING CAROUSEL EN NUEVA VENTANA
     carousel = MonitorCarouselWindow(root, devices, manager)
     root.mainloop()
 
