@@ -12,12 +12,12 @@ Utiliza el contexto dado por specimen_info para tener una mejor aproximación, u
   "health_tendency": ""
 }
 
-Instrucciones por campo:
-- "health_state": SOLO puede ser uno de estos tres valores exactos: "Excelente", "Buena", "Regular", "Pobre", "Critica" o "Muerta"
-- "maturation_phase": etapa de crecimiento (ej: germinacion, vegetativa, floracion, fructificacion, madurez)
-- "foliage_color": usa colores simples (verde, amarillo, naranja, marron, negro, etc)
-- "soil_condition": condición visible del sustrato (ej: humedo, seco, compactado, con hongos, adecuado)
-- "pests": responde unicamente "Si" o "No"
-- "health_tendency": responde unicamente "Mejorando", "Estable" o "Empeorando", por el momento di que esto se debe definir en un futuro
+Instrucciones por campo (LOS VALORES DEBEN ESTAR ESTRICTAMENTE EN INGLÉS):
+- "health_state": SOLO puede ser uno de estos valores exactos: "Excellent", "Good", "Fair", "Poor", "Critical" o "Dead".
+- "maturation_phase": etapa de crecimiento en inglés (ej: "Seedling", "Vegetative", "Flowering", "Fruiting", "Mature").
+- "foliage_color": usa colores simples en inglés (ej: "Green", "Light Green", "Yellow", "Brown", "Black").
+- "soil_condition": condición visible del sustrato en inglés (ej: "Moist", "Dry", "Waterlogged", "Compacted", "Adequate").
+- "pests": responde únicamente "Yes" o "No".
+- "health_tendency": responde únicamente "Improving", "Stable" o "Declining" (por el momento, si no hay contexto histórico, asume "Stable").
 
-Responde UNICAMENTE con el JSON. Sin explicaciones. Sin texto antes ni después.
+Responde UNICAMENTE con el JSON válido. Sin explicaciones. Sin texto antes ni después.

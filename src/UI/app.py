@@ -1,16 +1,19 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from database.plantManager import PlantManager
-from database.models import Specimen, Plant
+from database.models import Specimen, Plant, Observation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from utilities.chartManager import ChartManager
 import cv2
 
 class App:
     def __init__(self, root):
         self.root = root
-        self.root.title("Plant Monitoring System")
-        self.root.geometry("600x550")
+        self.root.title("Plant Monitoring System - Configuration")
+        self.root.geometry("750x650")
         self.manager = PlantManager()
         self.manager.initialize_database()
+        self.selected_camera_index = None  # ← guardamos la selección acá
         self._build_ui()
         self._refresh_all()
 
@@ -22,23 +25,63 @@ class App:
         self.tab_create_specimen = tk.Frame(self.notebook, padx=15, pady=15)
         self.tab_create_plant    = tk.Frame(self.notebook, padx=15, pady=15)
         self.tab_plants          = tk.Frame(self.notebook, padx=15, pady=15)
+        self.tab_stats           = tk.Frame(self.notebook, padx=15, pady=15)
 
         self.notebook.add(self.tab_cameras,         text="  Cameras  ")
         self.notebook.add(self.tab_create_specimen, text="  Create Specimen  ")
         self.notebook.add(self.tab_create_plant,    text="  Create Plant  ")
         self.notebook.add(self.tab_plants,          text="  Registered Plants  ")
+        self.notebook.add(self.tab_stats,           text="  Global Statistics  ")
 
         self._build_cameras_section()
         self._build_create_specimen_section()
         self._build_create_plant_section()
         self._build_plants_section()
+        self._build_stats_section()
 
-    # ─── TAB 1: Cámaras ───────────────────────────────────────────────────────
+    def _build_stats_section(self):
+        tk.Label(self.tab_stats, text="Global Dashboard", font=("Arial", 12, "bold")).pack(anchor="w", pady=(0, 10))
+
+        btn_frame = tk.Frame(self.tab_stats)
+        btn_frame.pack(fill=tk.X, pady=5)
+
+        ttk.Button(btn_frame, text="General Health", command=lambda: self._show_chart("health")).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Soil vs Health", command=lambda: self._show_chart("soil")).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Pest Incidence", command=lambda: self._show_chart("pests")).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Inventory", command=lambda: self._show_chart("inventory")).pack(side=tk.LEFT, padx=5)
+
+        self.chart_display_frame = tk.Frame(self.tab_stats)
+        self.chart_display_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        self.current_stats_canvas = None
+
+    def _show_chart(self, chart_type):
+        if self.current_stats_canvas:
+            self.current_stats_canvas.get_tk_widget().destroy()
+
+        fig = None
+        all_obs = list(Observation.select())
+        all_plants = list(Plant.select())
+
+        if chart_type == "health":
+            fig = ChartManager.get_current_health_pie_figure(all_obs)
+        elif chart_type == "soil":
+            fig = ChartManager.get_soil_vs_health_figure(all_obs)
+        elif chart_type == "pests":
+            fig = ChartManager.get_pests_incidence_figure(all_obs)
+        elif chart_type == "inventory":
+            fig = ChartManager.get_specimen_inventory_figure(all_plants)
+
+        if fig:
+            self.current_stats_canvas = FigureCanvasTkAgg(fig, master=self.chart_display_frame)
+            self.current_stats_canvas.draw()
+            self.current_stats_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
     def _build_cameras_section(self):
         tk.Label(self.tab_cameras, text="Detected Cameras", font=("Arial", 12, "bold")).pack(anchor="w")
 
-        self.camera_listbox = tk.Listbox(self.tab_cameras, height=6)
+        self.camera_listbox = tk.Listbox(self.tab_cameras, height=6, selectmode=tk.SINGLE)
         self.camera_listbox.pack(fill=tk.X, pady=5)
+        self.camera_listbox.bind("<<ListboxSelect>>", self._on_camera_select)  # ← bind
 
         tk.Label(self.tab_cameras, text="Assign to plant:").pack(anchor="w")
         self.plant_var = tk.StringVar()
@@ -53,7 +96,6 @@ class App:
         tk.Button(self.tab_cameras, text="Assign Camera", command=self._assign_camera).pack(fill=tk.X, pady=5)
         tk.Button(self.tab_cameras, text="Refresh Cameras", command=self._detect_cameras).pack(fill=tk.X)
 
-    # ─── TAB 2: Crear Specimen ────────────────────────────────────────────────
     def _build_create_specimen_section(self):
         tk.Label(self.tab_create_specimen, text="Create Specimen", font=("Arial", 12, "bold")).pack(anchor="w")
 
@@ -71,7 +113,6 @@ class App:
 
         tk.Button(self.tab_create_specimen, text="Create Specimen", command=self._create_specimen).pack(fill=tk.X, pady=8)
 
-    # ─── TAB 3: Crear Plant ───────────────────────────────────────────────────
     def _build_create_plant_section(self):
         tk.Label(self.tab_create_plant, text="Create Plant", font=("Arial", 12, "bold")).pack(anchor="w")
 
@@ -86,7 +127,6 @@ class App:
 
         tk.Button(self.tab_create_plant, text="Create Plant", command=self._create_plant).pack(fill=tk.X, pady=8)
 
-    # ─── TAB 4: Plantas registradas ───────────────────────────────────────────
     def _build_plants_section(self):
         tk.Label(self.tab_plants, text="Registered Plants", font=("Arial", 12, "bold")).pack(anchor="w")
 
@@ -95,12 +135,12 @@ class App:
 
         tk.Button(self.tab_plants, text="Refresh Plants", command=self._refresh_plants).pack(fill=tk.X)
 
-    # ─── LÓGICA ───────────────────────────────────────────────────────────────
     def _detect_cameras(self):
         self.camera_listbox.delete(0, tk.END)
         self.detected_cameras = []
+        self.selected_camera_index = None  # ← reset al refrescar
         for i in range(5):
-            cam = cv2.VideoCapture(i, cv2.CAP_DSHOW)  # ← agregás CAP_DSHOW
+            cam = cv2.VideoCapture(i, cv2.CAP_DSHOW)
             if cam.isOpened():
                 self.camera_listbox.insert(tk.END, f"Camera index {i}")
                 self.detected_cameras.append(i)
@@ -108,9 +148,13 @@ class App:
         if not self.detected_cameras:
             self.camera_listbox.insert(tk.END, "No cameras found")
 
-    def _assign_camera(self):
+    def _on_camera_select(self, event):
         selected = self.camera_listbox.curselection()
-        if not selected:
+        if selected:
+            self.selected_camera_index = self.detected_cameras[selected[0]]
+
+    def _assign_camera(self):
+        if self.selected_camera_index is None:
             messagebox.showwarning("Warning", "Select a camera first.")
             return
         if not self.plant_var.get():
@@ -122,7 +166,7 @@ class App:
             messagebox.showerror("Error", "Interval must be a number.")
             return
 
-        camera_index = self.detected_cameras[selected[0]]
+        camera_index = self.selected_camera_index
         plant_desc = self.plant_var.get()
         plant = next((p for p in self.manager.get_plants() if p.plant_description == plant_desc), None)
 
@@ -130,6 +174,7 @@ class App:
             camera = self.manager.register_camera(index=camera_index, state="active")
             self.manager.assign_camera_to_plant(plant=plant, camera=camera, interval_hours=interval)
             messagebox.showinfo("Success", f"Camera {camera_index} assigned to '{plant_desc}'")
+            self.selected_camera_index = None  # ← reset después de asignar
             self._refresh_all()
 
     def _create_specimen(self):
@@ -195,5 +240,4 @@ class App:
         self.root.mainloop()
 
     def _on_close(self):
-        # No cerramos la BD acá — el monitoreo la va a necesitar
-        self.root.destroy()
+        self.root.quit()

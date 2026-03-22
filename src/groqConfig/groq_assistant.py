@@ -64,5 +64,21 @@ def analyze_plant(image_path, specimen_data: dict, context_path=DEFAULT_CONTEXT_
         )
 
         response_text = chat_completion.choices[0].message.content
-        return json.loads(response_text)
+        
+        # --- Limpiador anti-markdown ---
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        elif response_text.startswith("```"):
+            response_text = response_text[3:]
+        
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+            
+        response_text = response_text.strip()
+        
+        try:
+            return json.loads(response_text)
+        except Exception as e:
+            print(f"Error parseando JSON de Groq. La IA respondió: {response_text}")
+            return {}
 
