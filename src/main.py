@@ -8,7 +8,6 @@ import threading
 import tkinter as tk
 from UI.app import App
 
-
 def build_callback(manager, plant, specimen_data, camera_id):
     def on_photo(image_path):
         if db.is_closed():
@@ -17,8 +16,7 @@ def build_callback(manager, plant, specimen_data, camera_id):
             print(f"[Camera {camera_id}] Analyzing photo for Plant {plant.id}...")
             plant_data = analyze_plant(
                 image_path=image_path,
-                context_path="groqConfig/groq_context.txt",
-                specimen_data=specimen_data
+                specimen_data=specimen_data 
             )
             manager.register_current_observation(
                 plant=plant,
@@ -30,13 +28,17 @@ def build_callback(manager, plant, specimen_data, camera_id):
                 tendency=plant_data.get("health_tendency", "Unknown")
             )
             print(f"[Camera {camera_id} - Plant {plant.id}] Observation saved: {plant_data}")
+            
+            return plant_data 
+            
         except Exception as e:
             print(f"[Camera {camera_id} - Plant {plant.id}] Error during analysis: {e}")
+            return None
         finally:
             if not db.is_closed():
                 db.close()
     return on_photo
-
+    
 
 def start_monitoring():
     manager = PlantManager()
@@ -56,22 +58,28 @@ def start_monitoring():
         specimen_data = model_to_dict(manager.get_specimen(plant.specimen.id))
         callback = build_callback(manager, plant, specimen_data, camera_id)
 
-        cam = CameraDevice(ID=camera_id, state="active")
+        # Pasamos el nombre de la planta a la cámara
+        cam = CameraDevice(ID=camera_id, state="active", plant_name=plant.plant_description)
+        
+        # Para pruebas, usemos 10 segundos. Luego cambialo a: plant_camera.observation_interval * 3600
         cam.activate_job(
-            interval=plant_camera.observation_interval * 3600,
+            interval=10, 
             path="temp/",
             on_photo=callback
         )
         devices.append(cam)
         print(f"Camera {camera_id} activated for plant '{plant.plant_description}'")
 
-    print(f"\n{len(devices)} camera(s) running in background.\n")
+    print(f"\n{len(devices)} camera(s) running in Live Mode. Press 'q' on video windows to stop.\n")
 
     try:
-        while True:
+        # Mantenemos vivo el hilo principal mientras al menos una cámara siga corriendo
+        while any(cam.running for cam in devices):
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\nShutting down...")
+        print("\nForce shutting down...")
+    finally:
+        # Limpieza segura
         for cam in devices:
             cam.deactivate_job()
             cam.release()
